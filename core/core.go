@@ -22,6 +22,16 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+var logger *log.Logger
+
+func Logger() *log.Logger {
+	if logger == nil {
+		logger = log.New(os.Stdout, "", log.LstdFlags)
+	}
+
+	return logger
+}
+
 func createTorClient() *http.Client {
 	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9050", nil, proxy.Direct)
 	if err != nil {
@@ -94,7 +104,6 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartServer() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
 	s := &http.Server{
 		Addr:           ":8080",
 		Handler:        http.HandlerFunc(handleRequest),
@@ -104,9 +113,9 @@ func StartServer() {
 	}
 
 	go func() {
-		logger.Printf("Starting server on %s", s.Addr)
+		Logger().Printf("Starting server on %s", s.Addr)
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatalf("Could not listen on %s: %v\n", s.Addr, err)
+			Logger().Fatalf("Could not listen on %s: %v\n", s.Addr, err)
 		}
 	}()
 
@@ -114,14 +123,14 @@ func StartServer() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	<-stop // wait for sigint
-	logger.Println("Shutting down gracefully...")
+	Logger().Println("Shutting down gracefully...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := s.Shutdown(ctx); err != nil {
-		logger.Printf("Forcibly shutting down due to error: %v", err)
+		Logger().Printf("Forcibly shutting down due to error: %v", err)
 	}
 
-	logger.Println("Successfully terminated server")
+	Logger().Println("Successfully terminated server")
 }
