@@ -1,0 +1,127 @@
+/*
+	This package contains the core logic for the proxy.
+*/
+
+package core
+
+import (
+	"bytes"
+	"context"
+	_ "embed"
+	"io"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/gideongrinberg/tor-gate/assets"
+	"golang.org/x/net/proxy"
+)
+
+func createTorClient() *http.Client {
+	dialer, err := proxy.SOCKS5("tcp", "127.0.0.1:9050", nil, proxy.Direct)
+	if err != nil {
+		log.Fatalf("Failed to create SOCKS5 dialer: %v", err)
+	}
+
+	dialCtx := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return dialer.Dial(network, addr)
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			DialContext:       dialCtx,
+			DisableKeepAlives: true,
+		},
+
+		Timeout: 30 * time.Second, // TODO: good value?
+	}
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("disclaimer_acknowledged")
+	if err != nil || cookie.Value != "true" {
+		w.Header().Add("Content-Type", "text/html")
+		w.Write(assets.Disclaimer)
+		return
+	}
+
+	host := r.Host
+	if colon := strings.Index(host, ":"); colon != -1 {
+		host = host[:colon]
+	}
+
+	// TODO: handle invalid subdomains
+	parts := strings.Split(host, ".")
+	subdomain := strings.Join(parts[:len(parts)-2], ".")
+	targetOnion := "http://" + subdomain + ".onion" + r.RequestURI
+
+	client := createTorClient()
+	body, _ := io.ReadAll(r.Body) // need error handling
+	req, _ := http.NewRequest("GET", targetOnion, bytes.NewReader(body))
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		w.WriteHeader(500)
+		w.Write([]byte("Failed to proxy request through Tor."))
+		log.Println(err)
+		return
+	}
+
+	defer res.Body.Close()
+
+	if strings.Contains(res.Header.Get("Content-Type"), "text/html") {
+
+	}
+
+	for name, values := range res.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+
+	w.WriteHeader(res.StatusCode)
+	io.Copy(w, res.Body)
+}
+
+func StartServer() {
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+	s := &http.Server{
+		Addr:           ":8080",
+		Handler:        http.HandlerFunc(handleRequest),
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	go func() {
+		logger.Printf("Starting server on %s", s.Addr)
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatalf("Could not listen on %s: %v\n", s.Addr, err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	<-stop // wait for sigint
+	logger.Println("Shutting down gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Shutdown(ctx); err != nil {
+		logger.Printf("Forcibly shutting down due to error: %v", err)
+	}
+
+	logger.Println("Successfully terminated server")
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TorGate Disclaimer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #222;
+      text-align: center;
+    }
+
+    p {
+      font-size: 1.1em;
+    }
+
+    ul {
+      margin-top: 20px;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    a {
+      color: #0066cc;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin-top: 30px;
+      font-size: 1.1em;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #004999;
+    }
+
+    .disclaimer-note {
+      font-size: 0.95em;
+      color: #666;
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to TorGate</h1>
+    <p>
+      This TorGate server does not host any content. It is merely a proxy for hidden services hosted on
+      <a href="https://torproject.org" target="_blank">the Tor Network</a>.
+      Please note that your access to this site is <strong>not anonymous</strong>.
+      If you require anonymity, you are encouraged to
+      <a href="https://torproject.org/download" target="_blank">download the Tor Browser</a>.
+    </p><p>
+      Users who are unable to access the Tor Project website can download Tor from
+      <a href="https://tor.eff.org" target="_blank">tor.eff.org</a> or
+      <a href="https://tor.calyxinstitute.org/" target="_blank">tor.calyxinstitute.org</a>,
+      using <a href="https://t.me/gettor_bot" target="_blank">the GetTor Telegram bot</a>,
+      or by emailing <a href="mailto:gettor@torproject.org">gettor@torproject.org</a>.
+      If you have concerns about content accessible through this site, please contact its administrators.
+    </p>
+
+    <p>By accessing this site, you acknowledge that:</p>
+    <ul>
+      <li>TorGate does not guarantee your anonymity or privacy.</li>
+      <li>Neither the TorGate developers nor the hosts of this site are responsible for the content of hidden services made available by TorGate, or for your conduct on such hidden services.</li>
+    </ul>
+
+      <button onclick="acknowledgeDisclaimer()">I acknowledge this disclaimer and wish to continue to the content</button>
+    <div class="disclaimer-note">
+      Your acknowledgment will be remembered using a cookie for future visits.
+    </div>
+  </div>
+  <script>
+        function acknowledgeDisclaimer() {
+      document.cookie = "disclaimer_acknowledged=true; path=/; max-age=" + 60 * 60 * 24 * 365;
+      window.location.reload()
+    }
+  </script>
+</body>
+</html>
