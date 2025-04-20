@@ -137,7 +137,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 func StartServer() {
 	config = LoadConfig()
 	s := &http.Server{
-		Addr:           ":8080",
+		Addr:           config.Port,
 		Handler:        http.HandlerFunc(handleRequest),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
