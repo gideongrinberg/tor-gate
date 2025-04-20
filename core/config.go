@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	Domain             string            `json:"domain,omitempty"`
 	Whitelist          []string          `json:"whitelist,omitempty"`
 	Blacklist          []string          `json:"blacklist,omitempty"`
 	Translations       map[string]string `json:"translations,omitempty"`
@@ -16,6 +17,7 @@ type Config struct {
 
 func LoadConfig() *Config {
 	config := &Config{
+		Domain:         "localhost:8080",
 		Whitelist:      []string{},
 		Blacklist:      []string{},
 		Translations:   make(map[string]string),

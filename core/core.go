@@ -116,18 +116,22 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	defer res.Body.Close()
 
-	if strings.Contains(res.Header.Get("Content-Type"), "text/html") {
-
-	}
-
 	for name, values := range res.Header {
 		for _, value := range values {
 			w.Header().Add(name, value)
 		}
 	}
-
 	w.WriteHeader(res.StatusCode)
-	io.Copy(w, res.Body)
+
+	if strings.Contains(res.Header.Get("Content-Type"), "text/html") {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(res.Body)
+		html := RewriteLinks(buf.Bytes(), config.Domain)
+		w.Write([]byte(html))
+	} else {
+		io.Copy(w, res.Body)
+	}
+
 }
 
 func StartServer() {

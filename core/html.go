@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func rewriteLinks(htmlContent []byte, proxyDomain string) string {
+func RewriteLinks(htmlContent []byte, proxyDomain string) string {
 	re := regexp.MustCompile(`href=["'](http://([a-zA-Z0-9\-]+)\.onion[^"']*)["']`)
 
 	result := re.ReplaceAllStringFunc(string(htmlContent), func(match string) string {

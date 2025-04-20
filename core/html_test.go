@@ -34,7 +34,7 @@ func TestRewriteLinks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			modifiedHTML := rewriteLinks([]byte(tt.inputHTML), tt.proxyDomain)
+			modifiedHTML := RewriteLinks([]byte(tt.inputHTML), tt.proxyDomain)
 			output := strings.TrimSpace(string(modifiedHTML))
 			expected := strings.TrimSpace(tt.expected)
 			if output != expected {
