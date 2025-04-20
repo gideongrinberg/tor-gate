@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -22,6 +24,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+var config *Config
 var logger *log.Logger
 
 func Logger() *log.Logger {
@@ -53,11 +56,13 @@ func createTorClient() *http.Client {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("disclaimer_acknowledged")
-	if err != nil || cookie.Value != "true" {
-		w.Header().Add("Content-Type", "text/html")
-		w.Write(assets.Disclaimer)
-		return
+	if config.ShowDisclaimer {
+		cookie, err := r.Cookie("disclaimer_acknowledged")
+		if err != nil || cookie.Value != "true" {
+			w.Header().Add("Content-Type", "text/html")
+			w.Write(assets.Disclaimer)
+			return
+		}
 	}
 
 	host := r.Host
@@ -68,7 +73,29 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	// TODO: handle invalid subdomains
 	parts := strings.Split(host, ".")
 	subdomain := strings.Join(parts[:len(parts)-2], ".")
+	if config.EnableTranslations {
+		onion, err := config.Translations[subdomain]
+		if !err {
+			w.WriteHeader(404)
+			w.Write([]byte(fmt.Sprintf("Could not find %s.onion", subdomain)))
+		}
+
+		subdomain = onion
+	}
+
 	targetOnion := "http://" + subdomain + ".onion" + r.RequestURI
+
+	if slices.Contains(config.Blacklist, subdomain) {
+		w.WriteHeader(403)
+		w.Write(assets.Blacklist)
+		return
+	}
+
+	if config.WhitelistOnly && !slices.Contains(config.Whitelist, subdomain) {
+		w.WriteHeader(403)
+		w.Write(assets.Whitelist)
+		return
+	}
 
 	client := createTorClient()
 	body, _ := io.ReadAll(r.Body) // need error handling
@@ -104,6 +131,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartServer() {
+	config = LoadConfig()
 	s := &http.Server{
 		Addr:           ":8080",
 		Handler:        http.HandlerFunc(handleRequest),
@@ -121,7 +149,6 @@ func StartServer() {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
 	<-stop // wait for sigint
 	Logger().Println("Shutting down gracefully...")
 
